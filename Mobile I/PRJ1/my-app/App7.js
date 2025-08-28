@@ -1,47 +1,40 @@
 import React, {Component} from 'react';
 import {Text, View, StyleSheet} from 'react-native';
-import { TextInput, Button } from 'react-native-web';
- 
+import { TextInput } from 'react-native-web';
+
 class App extends Component {
     constructor (props){
         super(props);
         this.state = {
-            nome: '',
-            input: ''
+            nome: ''
         };
- 
-        this.entrar = this.entrar.bind(this);
+        this.pegaNome = this.pegaNome.bind(this);
     }
- 
-    entrar() {
-        if(this.state.input === ''){
-            alert('Digite seu nome!')
-            return
+
+    pegaNome(texto){
+        if(texto.length > 0){
+            this.setState({nome: 'Bem Vindo ' + texto});
+        }else{
+            this.setState({nome: ''});
+        }
     }
- 
-    this.setState({nome: 'Bem Vindo: ' + this.state.input});
-   }
- 
-    render() {
+
+    render(){
         return (
             <View style={styles.container}>
- 
                 <TextInput
-                style={styles.input}
-                placeholder = "Digite seu nome"
-                underlineColorAndroid="transparent"
-                onChangeText={texto => this.setState({input: texto})}
-                />
- 
-                <Button title="Entrar" onPress={this.entrar} />
- 
+                    style={styles.input}
+                    placeholder="Digite seu nome..."
+                    underlineColorAndroid='transparent'
+                    onChangeText={this.pegaNome}>
+                </TextInput>
+                
                 <Text style={styles.texto}>{this.state.nome}</Text>
- 
             </View>
         );
     }
 }
- 
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -59,5 +52,5 @@ const styles = StyleSheet.create({
         fontSize: 25,
     }
 });
- 
+
 export default App;
