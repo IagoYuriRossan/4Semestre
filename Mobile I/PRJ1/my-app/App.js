@@ -1,63 +1,22 @@
-import React, {Component} from 'react';
-import {Text, View, StyleSheet} from 'react-native';
-import { TextInput, Button } from 'react-native-web';
- 
-class App extends Component {
-    constructor (props){
-        super(props);
-        this.state = {
-            nome: '',
-            input: ''
-        };
- 
-        this.entrar = this.entrar.bind(this);
-    }
- 
-    entrar() {
-        if(this.state.input === ''){
-            alert('Digite seu nome!')
-            return
-    }
- 
-    this.setState({nome: 'Bem Vindo: ' + this.state.input});
-   }
- 
-    render() {
-        return (
-            <View style={styles.container}>
- 
-                <TextInput
-                style={styles.input}
-                placeholder = "Digite seu nome"
-                underlineColorAndroid="transparent"
-                onChangeText={texto => this.setState({input: texto})}
-                />
- 
-                <Button title="Entrar" onPress={this.entrar} />
- 
-                <Text style={styles.texto}>{this.state.nome}</Text>
- 
-            </View>
-        );
-    }
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack'; // <-- Corrigido aqui!
+
+import HomeScreen from './src/screens/HomeScreen';
+import CadastroScreen from './src/screens/CadastroScreen';
+import ConsultaScreen from './src/screens/ConsultaScreen';
+
+const Stack = createNativeStackNavigator();
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Página Inicial' }} />
+        <Stack.Screen name="Cadastro" component={CadastroScreen} />
+        <Stack.Screen name="Consulta" component={ConsultaScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }
- 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    input: {
-        height: 40,
-        borderWidth: 1,
-        borderColor: '#222',
-        margin: 10,
-        fontSize: 20,
-        padding: 10,
-    },
-    texto: {
-        textAlign: 'center',
-        fontSize: 25,
-    }
-});
- 
-export default App;
+export { App };
