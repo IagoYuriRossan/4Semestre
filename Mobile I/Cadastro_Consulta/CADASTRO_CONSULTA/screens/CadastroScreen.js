@@ -9,7 +9,7 @@ const CadastroScreen = () => {
 
 	const handleCadastro = async () => {
 		try {
-			const response = await axios.post('http://192.168.0.92:3000/cadastro', {
+			const response = await axios.post('http://192.168.56.1:3000/api/cadastro', {
 				nome,
 				email,
 				senha,
@@ -22,21 +22,6 @@ const CadastroScreen = () => {
 				console.error('Erro ao enviar dados:', error);
 			}
 		};
-
-	const fetchUsuarios = async () => {
-		try {
-			const response = await axios.get('http://192.168.56.1:3000/usuarios');
-			console.log(response.data);
-		
-    } catch (error) {
-			console.error('Erro ao buscar dados:', error);
-		}
-	};
-
-    //Chama a função fetchUsuarios quando o componente é montado
-		useEffect(() => {
-			fetchUsuarios();
-		}, []);
 
 	return (
 		<View style={styles.container}>
