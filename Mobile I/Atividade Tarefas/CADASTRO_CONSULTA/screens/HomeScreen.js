@@ -15,7 +15,12 @@ const API_BASE = "http://192.168.56.1:3000/api";
 const HomeScreen = ({ navigation }) => {
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("ativas"); // 'ativas' | 'completas'
+  const [activeTab, setActiveTab] = useState("pendente");
+  const STATUS_TABS = [
+    { key: "pendente", label: "Pendente" },
+    { key: "em_processo", label: "Em processo" },
+    { key: "completa", label: "Concluídas" },
+  ];
 
   const carregarTarefas = useCallback(async () => {
     setLoading(true);
@@ -50,6 +55,19 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const handleChangeStatus = async (item, newStatus) => {
+    try {
+      await axios.put(`${API_BASE}/tarefas/${item.id}`, {
+        descricao: item.descricao,
+        status: newStatus,
+      });
+      carregarTarefas();
+    } catch (err) {
+      console.error("Erro ao alterar status:", err);
+      Alert.alert("Erro", "Falha ao alterar status da tarefa");
+    }
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.item}>
       <View style={{ flex: 1 }}>
@@ -57,45 +75,48 @@ const HomeScreen = ({ navigation }) => {
         <Text style={styles.status}>{item.status}</Text>
       </View>
       <View style={styles.actions}>
-        {activeTab === "ativas" ? (
-          <>
+        <>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("EditarTarefa", { tarefa: item })
+            }
+            style={styles.actionBtn}
+          >
+            <Text style={styles.actionText}>Editar</Text>
+          </TouchableOpacity>
+          {/* Quick status actions: show relevant buttons */}
+          {String(item.status).toLowerCase() !== "em_processo" && (
             <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("EditarTarefa", { tarefa: item })
-              }
-              style={styles.actionBtn}
+              onPress={() => handleChangeStatus(item, "em_processo")}
+              style={[styles.actionBtn, { backgroundColor: "#1976d2" }]}
             >
-              <Text style={styles.actionText}>Editar</Text>
+              <Text style={styles.actionText}>Em processo</Text>
             </TouchableOpacity>
+          )}
+          {/* 'Pausar' foi removido; 'pausado' é tratado como 'pendente' */}
+          {String(item.status).toLowerCase() !== "completa" && (
             <TouchableOpacity
               onPress={() => handleChangeStatus(item, "completa")}
               style={[styles.actionBtn, { backgroundColor: "#388e3c" }]}
             >
-              <Text style={styles.actionText}>Completar</Text>
+              <Text style={styles.actionText}>Concluir</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDeletar(item.id)}
-              style={[styles.actionBtn, { backgroundColor: "#e53935" }]}
-            >
-              <Text style={styles.actionText}>Excluir</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
+          )}
+          {String(item.status).toLowerCase() === "completa" && (
             <TouchableOpacity
               onPress={() => handleChangeStatus(item, "pendente")}
-              style={[styles.actionBtn, { backgroundColor: "#ffa000" }]}
+              style={[styles.actionBtn, { backgroundColor: "#6a1b9a" }]}
             >
               <Text style={styles.actionText}>Reabrir</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDeletar(item.id)}
-              style={[styles.actionBtn, { backgroundColor: "#e53935" }]}
-            >
-              <Text style={styles.actionText}>Excluir</Text>
-            </TouchableOpacity>
-          </>
-        )}
+          )}
+          <TouchableOpacity
+            onPress={() => handleDeletar(item.id)}
+            style={[styles.actionBtn, { backgroundColor: "#e53935" }]}
+          >
+            <Text style={styles.actionText}>Excluir</Text>
+          </TouchableOpacity>
+        </>
       </View>
     </View>
   );
@@ -111,51 +132,54 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.tabRow}>
-        <TouchableOpacity
-          onPress={() => setActiveTab("ativas")}
-          style={[styles.tabBtn, activeTab === "ativas" && styles.tabActive]}
-        >
-          <Text
+        {STATUS_TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            onPress={() => setActiveTab(t.key)}
             style={[
-              styles.tabText,
-              activeTab === "ativas" && styles.tabTextActive,
+              styles.tabBtn,
+              activeTab === t.key &&
+                (t.key === "completa"
+                  ? styles.tabActiveCompletas
+                  : styles.tabActiveAtivas),
             ]}
           >
-            Ativas
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab("completas")}
-          style={[styles.tabBtn, activeTab === "completas" && styles.tabActive]}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "completas" && styles.tabTextActive,
-            ]}
-          >
-            Completas
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === t.key && styles.tabTextActive,
+              ]}
+            >
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {loading ? (
         <Text style={styles.loading}>Carregando...</Text>
       ) : (
         <FlatList
-          data={
-            activeTab === "ativas"
-              ? tarefas.filter(
-                  (t) =>
-                    String(t.status).toLowerCase() !== "completa" &&
-                    String(t.status).toLowerCase() !== "complet"
-                )
-              : tarefas.filter(
-                  (t) =>
-                    String(t.status).toLowerCase() === "completa" ||
-                    String(t.status).toLowerCase() === "complet"
-                )
-          }
+          data={tarefas.filter((t) => {
+            const s = String(t.status).toLowerCase();
+            if (activeTab === "pendente")
+              return (
+                s === "pendente" ||
+                s === "pausado" ||
+                s === "pausa" ||
+                s === "em_espera"
+              );
+            if (activeTab === "em_processo")
+              return s === "em_processo" || s === "em processo";
+            if (activeTab === "completa")
+              return (
+                s === "completa" ||
+                s === "completo" ||
+                s === "concluida" ||
+                s === "concluido"
+              );
+            return true;
+          })}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           contentContainerStyle={{ padding: 16 }}
@@ -168,19 +192,7 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-// Adiciona função para alterar status rapidamente
-const handleChangeStatus = async (item, newStatus) => {
-  try {
-    await axios.put(`${API_BASE}/tarefas/${item.id}`, {
-      descricao: item.descricao,
-      status: newStatus,
-    });
-    // força recarregar via evento de focus já existente — mas podemos recarregar diretamente
-  } catch (err) {
-    console.error("Erro ao alterar status:", err);
-    Alert.alert("Erro", "Falha ao alterar status da tarefa");
-  }
-};
+// note: handleChangeStatus agora está definido dentro do componente para permitir recarregar
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
@@ -214,6 +226,31 @@ const styles = StyleSheet.create({
   actionText: { color: "#fff" },
   loading: { textAlign: "center", marginTop: 20 },
   empty: { textAlign: "center", marginTop: 20, color: "#666" },
+  tabRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  tabBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginHorizontal: 6,
+    backgroundColor: "#f0f0f0",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  tabActiveAtivas: {
+    backgroundColor: "#2e7d32",
+    borderColor: "#1b5e20",
+  },
+  tabActiveCompletas: {
+    backgroundColor: "#1565c0",
+    borderColor: "#0d47a1",
+  },
+  tabText: { fontSize: 16, color: "#333", fontWeight: "600" },
+  tabTextActive: { color: "#fff" },
 });
 
 export default HomeScreen;
