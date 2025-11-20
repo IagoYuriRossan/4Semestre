@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import axios from "axios";
 
@@ -16,6 +17,7 @@ const HomeScreen = ({ navigation }) => {
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("pendente");
+  const [savingId, setSavingId] = useState(null);
   const STATUS_TABS = [
     { key: "pendente", label: "Pendente" },
     { key: "em_processo", label: "Em processo" },
@@ -57,22 +59,46 @@ const HomeScreen = ({ navigation }) => {
 
   const handleChangeStatus = async (item, newStatus) => {
     try {
-      await axios.put(`${API_BASE}/tarefas/${item.id}`, {
+      setSavingId(item.id);
+      const res = await axios.put(`${API_BASE}/tarefas/${item.id}`, {
         descricao: item.descricao,
         status: newStatus,
       });
-      carregarTarefas();
+      console.log("PUT /tarefas/:id response", res.data);
+      await carregarTarefas();
     } catch (err) {
       console.error("Erro ao alterar status:", err);
       Alert.alert("Erro", "Falha ao alterar status da tarefa");
+    } finally {
+      setSavingId(null);
     }
   };
 
   const renderItem = ({ item }) => (
     <View style={styles.item}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.desc}>{item.descricao}</Text>
-        <Text style={styles.status}>{item.status}</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={styles.desc}>{item.descricao}</Text>
+          <View
+            style={[
+              styles.badge,
+              { backgroundColor: getStatusColor(item.status) },
+            ]}
+          >
+            <Text style={styles.badgeText}>
+              {formatStatusLabel(item.status)}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.status}>
+          {String(item.observacao || item.status)}
+        </Text>
       </View>
       <View style={styles.actions}>
         <>
@@ -80,47 +106,75 @@ const HomeScreen = ({ navigation }) => {
             onPress={() =>
               navigation.navigate("EditarTarefa", { tarefa: item })
             }
-            style={styles.actionBtn}
+            style={[styles.actionBtnSmall, { backgroundColor: "#4a148c" }]}
           >
-            <Text style={styles.actionText}>Editar</Text>
+            <Text style={styles.actionTextSmall}>Editar</Text>
           </TouchableOpacity>
-          {/* Quick status actions: show relevant buttons */}
+
           {String(item.status).toLowerCase() !== "em_processo" && (
             <TouchableOpacity
               onPress={() => handleChangeStatus(item, "em_processo")}
-              style={[styles.actionBtn, { backgroundColor: "#1976d2" }]}
+              style={[styles.actionBtnSmall, { backgroundColor: "#1976d2" }]}
+              disabled={savingId === item.id}
             >
-              <Text style={styles.actionText}>Em processo</Text>
+              {savingId === item.id ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.actionTextSmall}>Em processo</Text>
+              )}
             </TouchableOpacity>
           )}
-          {/* 'Pausar' foi removido; 'pausado' é tratado como 'pendente' */}
+
           {String(item.status).toLowerCase() !== "completa" && (
             <TouchableOpacity
               onPress={() => handleChangeStatus(item, "completa")}
-              style={[styles.actionBtn, { backgroundColor: "#388e3c" }]}
+              style={[styles.actionBtnSmall, { backgroundColor: "#388e3c" }]}
+              disabled={savingId === item.id}
             >
-              <Text style={styles.actionText}>Concluir</Text>
+              {savingId === item.id ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.actionTextSmall}>Concluir</Text>
+              )}
             </TouchableOpacity>
           )}
+
           {String(item.status).toLowerCase() === "completa" && (
             <TouchableOpacity
               onPress={() => handleChangeStatus(item, "pendente")}
-              style={[styles.actionBtn, { backgroundColor: "#6a1b9a" }]}
+              style={[styles.actionBtnSmall, { backgroundColor: "#6a1b9a" }]}
             >
-              <Text style={styles.actionText}>Reabrir</Text>
+              <Text style={styles.actionTextSmall}>Reabrir</Text>
             </TouchableOpacity>
           )}
+
           <TouchableOpacity
             onPress={() => handleDeletar(item.id)}
-            style={[styles.actionBtn, { backgroundColor: "#e53935" }]}
+            style={[styles.actionBtnSmall, { backgroundColor: "#e53935" }]}
           >
-            <Text style={styles.actionText}>Excluir</Text>
+            <Text style={styles.actionTextSmall}>Excluir</Text>
           </TouchableOpacity>
         </>
       </View>
     </View>
   );
 
+  function getStatusColor(status) {
+    const s = String(status || "").toLowerCase();
+    if (s.includes("complet")) return "#2e7d32";
+    if (s.includes("em_processo") || s.includes("em processo"))
+      return "#1565c0";
+    // treat paused/pausa/em_espera as pending
+    return "#f57c00";
+  }
+
+  function formatStatusLabel(status) {
+    const s = String(status || "").toLowerCase();
+    if (s.includes("complet")) return "Concluída";
+    if (s.includes("em_processo") || s.includes("em processo"))
+      return "Em processo";
+    return "Pendente";
+  }
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -249,6 +303,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#1565c0",
     borderColor: "#0d47a1",
   },
+  tabActiveEmProcesso: {
+    backgroundColor: "#1976d2",
+    borderColor: "#0d47a1",
+  },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  badgeText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 10,
+    borderWidth: 0,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    // shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  actionBtnSmall: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 6,
+    marginLeft: 6,
+    minWidth: 70,
+    alignItems: "center",
+  },
+  actionTextSmall: { color: "#fff", fontSize: 12, fontWeight: "600" },
   tabText: { fontSize: 16, color: "#333", fontWeight: "600" },
   tabTextActive: { color: "#fff" },
 });

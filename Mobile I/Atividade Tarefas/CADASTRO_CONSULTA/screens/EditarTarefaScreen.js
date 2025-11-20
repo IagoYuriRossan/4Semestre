@@ -3,10 +3,10 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   Alert,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import axios from "axios";
 
@@ -17,6 +17,7 @@ const EditarTarefaScreen = ({ route, navigation }) => {
   const [id, setId] = useState(tarefaParam?.id ?? null);
   const [descricao, setDescricao] = useState(tarefaParam?.descricao ?? "");
   const [status, setStatus] = useState(tarefaParam?.status ?? "pendente");
+  const [saving, setSaving] = useState(false);
   const STATUS_OPTIONS = [
     { key: "pendente", label: "Pendente" },
     { key: "em_processo", label: "Em processo" },
@@ -38,12 +39,15 @@ const EditarTarefaScreen = ({ route, navigation }) => {
     }
 
     try {
+      setSaving(true);
       await axios.put(`${API_BASE}/tarefas/${id}`, { descricao, status });
       Alert.alert("Sucesso", "Tarefa atualizada");
       navigation.navigate("Home");
     } catch (err) {
       console.error("Erro ao atualizar:", err);
       Alert.alert("Erro", "Falha ao atualizar tarefa");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -86,7 +90,17 @@ const EditarTarefaScreen = ({ route, navigation }) => {
         ))}
       </View>
 
-      <Button title="Atualizar" onPress={handleAtualizar} color="#6200ee" />
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={handleAtualizar}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.saveBtnText}>Atualizar</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -123,6 +137,14 @@ const styles = StyleSheet.create({
   statusOptionActive: { backgroundColor: "#1976d2" },
   statusOptionText: { color: "#333" },
   statusOptionTextActive: { color: "#fff" },
+  saveBtn: {
+    marginTop: 8,
+    backgroundColor: "#6200ee",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  saveBtnText: { color: "#fff", fontWeight: "700" },
 });
 
 export default EditarTarefaScreen;

@@ -3,10 +3,10 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   Alert,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import axios from "axios";
 
@@ -15,12 +15,12 @@ const API_BASE = "http://192.168.56.1:3000/api";
 const NovaTarefaScreen = ({ navigation }) => {
   const [descricao, setDescricao] = useState("");
   const [status, setStatus] = useState("pendente");
+  const [saving, setSaving] = useState(false);
   const STATUS_OPTIONS = [
     { key: "pendente", label: "Pendente" },
     { key: "em_processo", label: "Em processo" },
     { key: "completa", label: "Concluída" },
   ];
-
   const handleSalvar = async () => {
     if (!descricao.trim()) {
       Alert.alert("Validação", "Descrição é obrigatória.");
@@ -28,6 +28,7 @@ const NovaTarefaScreen = ({ navigation }) => {
     }
 
     try {
+      setSaving(true);
       await axios.post(`${API_BASE}/tarefas`, { descricao, status });
       Alert.alert("Sucesso", "Tarefa adicionada");
       setDescricao("");
@@ -36,6 +37,8 @@ const NovaTarefaScreen = ({ navigation }) => {
     } catch (err) {
       console.error("Erro ao criar tarefa:", err);
       Alert.alert("Erro", "Falha ao criar tarefa");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -72,7 +75,17 @@ const NovaTarefaScreen = ({ navigation }) => {
         ))}
       </View>
 
-      <Button title="Salvar" onPress={handleSalvar} color="#6200ee" />
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={handleSalvar}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.saveBtnText}>Salvar</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -114,6 +127,14 @@ const styles = StyleSheet.create({
   statusOptionActive: { backgroundColor: "#1976d2" },
   statusOptionText: { color: "#333" },
   statusOptionTextActive: { color: "#fff" },
+  saveBtn: {
+    marginTop: 8,
+    backgroundColor: "#6200ee",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  saveBtnText: { color: "#fff", fontWeight: "700" },
 });
 
 export default NovaTarefaScreen;
