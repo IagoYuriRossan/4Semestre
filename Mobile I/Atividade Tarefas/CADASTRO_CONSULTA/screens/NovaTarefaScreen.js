@@ -29,11 +29,17 @@ const NovaTarefaScreen = ({ navigation }) => {
 
     try {
       setSaving(true);
-      await axios.post(`${API_BASE}/tarefas`, { descricao, status });
-      Alert.alert("Sucesso", "Tarefa adicionada");
+      const res = await axios.post(`${API_BASE}/tarefas`, {
+        descricao,
+        status,
+      });
+      // navigate to Home and show feedback banner there
       setDescricao("");
       setStatus("pendente");
-      navigation.navigate("Home");
+      navigation.navigate("Home", {
+        feedbackMessage: "Tarefa adicionada",
+        feedbackType: "success",
+      });
     } catch (err) {
       console.error("Erro ao criar tarefa:", err);
       Alert.alert("Erro", "Falha ao criar tarefa");

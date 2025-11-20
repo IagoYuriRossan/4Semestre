@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -13,11 +13,14 @@ import axios from "axios";
 
 const API_BASE = "http://192.168.56.1:3000/api";
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation, route }) => {
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("pendente");
   const [savingId, setSavingId] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
+  const [feedbackType, setFeedbackType] = useState("success");
+  const feedbackTimer = useRef(null);
   const STATUS_TABS = [
     { key: "pendente", label: "Pendente" },
     { key: "em_processo", label: "Em processo" },
@@ -46,14 +49,28 @@ const HomeScreen = ({ navigation }) => {
     return unsubscribe;
   }, [carregarTarefas, navigation]);
 
+  // show feedback passed via navigation params (e.g. after create/update)
+  useEffect(() => {
+    const fm = route?.params?.feedbackMessage;
+    const ft = route?.params?.feedbackType;
+    if (fm) {
+      showFeedback(fm, ft || "success");
+      // clear params so it doesn't show again
+      navigation.setParams({
+        feedbackMessage: undefined,
+        feedbackType: undefined,
+      });
+    }
+  }, [route?.params]);
+
   const handleDeletar = async (id) => {
     try {
       await axios.delete(`${API_BASE}/tarefas/${id}`);
-      Alert.alert("Sucesso", "Tarefa deletada");
       carregarTarefas();
+      showFeedback("Tarefa deletada", "success");
     } catch (err) {
       console.error("Erro ao deletar:", err);
-      Alert.alert("Erro", "Falha ao deletar tarefa");
+      showFeedback("Falha ao deletar tarefa", "error");
     }
   };
 
@@ -66,12 +83,24 @@ const HomeScreen = ({ navigation }) => {
       });
       console.log("PUT /tarefas/:id response", res.data);
       await carregarTarefas();
+      // show inline feedback (use the newStatus we requested to avoid mismatches)
+      showFeedback(`Status: ${formatStatusLabel(newStatus)}`, "success");
     } catch (err) {
       console.error("Erro ao alterar status:", err);
-      Alert.alert("Erro", "Falha ao alterar status da tarefa");
+      showFeedback("Falha ao alterar status da tarefa", "error");
     } finally {
       setSavingId(null);
     }
+  };
+
+  const showFeedback = (message, type = "success") => {
+    setFeedbackMessage(message);
+    setFeedbackType(type);
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = setTimeout(() => {
+      setFeedbackMessage(null);
+      feedbackTimer.current = null;
+    }, 2500);
   };
 
   const renderItem = ({ item }) => (
@@ -184,6 +213,19 @@ const HomeScreen = ({ navigation }) => {
           onPress={() => navigation.navigate("NovaTarefa")}
         />
       </View>
+
+      {feedbackMessage && (
+        <View
+          style={[
+            styles.feedback,
+            feedbackType === "success"
+              ? styles.feedbackSuccess
+              : styles.feedbackError,
+          ]}
+        >
+          <Text style={styles.feedbackText}>{feedbackMessage}</Text>
+        </View>
+      )}
 
       <View style={styles.tabRow}>
         {STATUS_TABS.map((t) => (
@@ -336,6 +378,15 @@ const styles = StyleSheet.create({
   actionTextSmall: { color: "#fff", fontSize: 12, fontWeight: "600" },
   tabText: { fontSize: 16, color: "#333", fontWeight: "600" },
   tabTextActive: { color: "#fff" },
+  feedback: {
+    padding: 10,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  feedbackText: { color: "#fff", textAlign: "center", fontWeight: "600" },
+  feedbackSuccess: { backgroundColor: "#2e7d32" },
+  feedbackError: { backgroundColor: "#c62828" },
 });
 
 export default HomeScreen;

@@ -41,8 +41,11 @@ const EditarTarefaScreen = ({ route, navigation }) => {
     try {
       setSaving(true);
       await axios.put(`${API_BASE}/tarefas/${id}`, { descricao, status });
-      Alert.alert("Sucesso", "Tarefa atualizada");
-      navigation.navigate("Home");
+      // navigate to Home and show feedback banner
+      navigation.navigate("Home", {
+        feedbackMessage: "Tarefa atualizada",
+        feedbackType: "success",
+      });
     } catch (err) {
       console.error("Erro ao atualizar:", err);
       Alert.alert("Erro", "Falha ao atualizar tarefa");
